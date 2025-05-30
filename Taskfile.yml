@@ -1,0 +1,80 @@
+version: '3'
+
+vars:
+  SRC_DIR: "src"
+  TEST_DIR: "tests"
+
+tasks:
+  install:
+    desc: Install development dependencies
+    cmds:
+      - uv sync --dev
+
+  test:
+    desc: Run tests
+    cmds:
+      - uv run pytest
+
+  test-cov:
+    desc: Run tests with coverage report
+    cmds:
+      - uv run pytest --cov={{.SRC_DIR}} --cov-report=html --cov-report=term
+
+  test-integration:
+    desc: Run integration tests (requires DEEPSEEK_API_KEY)
+    cmds:
+      - uv run pytest tests/test_integration.py -v
+
+  lint:
+    desc: Run ruff linting
+    cmds:
+      - uv run ruff check {{.SRC_DIR}} {{.TEST_DIR}}
+
+  format:
+    desc: Format code with ruff
+    cmds:
+      - uv run ruff format {{.SRC_DIR}} {{.TEST_DIR}}
+
+  format-check:
+    desc: Check if code is formatted
+    cmds:
+      - uv run ruff format --check {{.SRC_DIR}} {{.TEST_DIR}}
+
+  typecheck:
+    desc: Run pyrefly type checking
+    cmds:
+      - uv run pyrefly check src
+
+  check:
+    desc: Run all checks
+    deps: [lint, format-check, typecheck, test]
+
+  fix:
+    desc: Fix all auto-fixable issues
+    cmds:
+      - uv run ruff check --fix {{.SRC_DIR}} {{.TEST_DIR}}
+      - uv run ruff format {{.SRC_DIR}} {{.TEST_DIR}}
+
+  clean:
+    desc: Clean build artifacts and cache
+    cmds:
+      - rm -rf .pytest_cache/
+      - rm -rf htmlcov/
+      - rm -rf .coverage
+      - rm -rf dist/
+      - rm -rf build/
+      - find . -type d -name "__pycache__" -exec rm -rf {} +
+      - find . -type f -name "*.pyc" -delete
+
+  build:
+    desc: Build package
+    cmds:
+      - uv build
+
+  test-hook:
+    desc: Test pre-commit hook locally (requires DEEPSEEK_API_KEY)
+    cmds:
+      - echo "Testing hook with dummy file..."
+      - echo "# Test markdown" > test_file.md
+      - uv run python -m sem_merge test_file.md
+      - rm -f test_file.md 

@@ -1,0 +1,11 @@
+-   id: semantic-merge
+    name: Semantic Document Merge
+    description: AI-powered semantic merging of documentation files
+    entry: python -m sem_merge
+    language: python
+    files: \.(md|mdc)$
+    exclude_types: [binary]
+    require_serial: false
+    minimum_pre_commit_version: '2.15.0'
+    pass_filenames: true
+    stages: [pre-commit] 
