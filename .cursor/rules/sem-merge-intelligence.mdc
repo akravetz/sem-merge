@@ -61,6 +61,24 @@ User strongly emphasized fail-safe operation:
 
 **Pattern**: For development tools, never interrupt the user's primary workflow.
 
+### Exception Handling Standards (Latest)
+User has strict preferences for exception handling patterns:
+- **Proper Exception Chaining**: Always use `except Exception as err: raise ... from err`
+- **Never use `from None`**: Preserves debugging context and exception chains
+- **Simplified Try/Except**: Avoid unnecessary nesting of try/except blocks
+- **Combined Exception Types**: Use `except (Type1, Type2):` instead of nested blocks
+
+**Pattern**: Clean, debuggable exception handling with proper context preservation.
+
+### Taskfile Command Priority (Latest)
+User requires strict adherence to taskfile commands over direct script execution:
+- **Always use task commands**: Never call scripts directly when taskfile commands exist
+- **Leverage existing automation**: Use `task check`, `task test`, etc.
+- **Consistency**: Maintain uniform development workflow through tasks
+- **No direct Python calls**: Avoid `uv run python -c "..."` when tasks are available
+
+**Pattern**: Taskfile-first development workflow for consistency and maintainability.
+
 ## Technical Preferences
 
 ### Project Structure

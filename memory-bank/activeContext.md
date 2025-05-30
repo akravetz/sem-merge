@@ -155,6 +155,14 @@ repos:
 
 ## Recent Problem-Solution Patterns
 
+### Problem: Improper Exception Handling Patterns
+**Solution**: Implement proper exception chaining and eliminate unnecessary nesting
+**Pattern**: Use `except Exception as err: raise ... from err` and combine exception types with `except (Type1, Type2):`
+
+### Problem: Direct Script Execution Over Taskfile Commands
+**Solution**: Always prioritize taskfile commands over direct script execution
+**Pattern**: Use `task check` instead of direct `uv run` commands when tasks are available
+
 ### Problem: Type Checker Conflicts with External APIs
 **Solution**: Strategic use of `# type: ignore` comments with specific error codes
 **Pattern**: Maintain type safety for internal code while allowing external API flexibility
@@ -173,9 +181,15 @@ repos:
 
 ## Memory Bank Maintenance Notes
 
-**Last Updated**: Current session - comprehensive memory bank creation
-**Update Trigger**: User request for memory bank update
-**Update Scope**: Complete memory bank creation with all required files
-**Next Review**: When significant features are added or architecture changes
+**Last Updated**: Current session - exception handling improvements and taskfile patterns
+**Update Trigger**: User request for memory bank update after code quality improvements
+**Update Scope**: Added latest session changes, exception handling patterns, and taskfile usage guidelines
+**Next Review**: When significant features are added, architecture changes, or new development patterns emerge
 
-This memory bank provides complete context for understanding the sem-merge project's current state, technical decisions, and implementation details. 
+**Recent Updates**:
+- Added exception handling improvement documentation
+- Documented taskfile-first development workflow requirements
+- Updated problem-solution patterns with latest learnings
+- Maintained comprehensive project context and current state
+
+This memory bank provides complete context for understanding the sem-merge project's current state, technical decisions, implementation details, and preferred development patterns. 
