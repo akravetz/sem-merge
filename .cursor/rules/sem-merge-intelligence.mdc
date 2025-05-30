@@ -1,0 +1,190 @@
+---
+description: 
+globs: 
+alwaysApply: false
+---
+# Project Intelligence: sem-merge
+
+## Key Development Patterns
+
+### Modern Python Tooling Stack Preference
+The user strongly prefers modern Python development tools:
+- **uv**: For package management (replaces pip/poetry)
+- **ruff**: For linting and formatting (replaces black/flake8/isort)
+- **pyrefly**: For type checking (Meta's strict type checker)
+- **Taskfile.yml**: For task automation (replaces Makefiles)
+
+**Pattern**: Always use these tools in new Python projects. User explicitly requested this stack.
+
+### Pre-commit Framework Integration Strategy
+The user chose pre-commit framework integration exclusively, rejecting standalone CLI approaches:
+- Configuration via `.pre-commit-hooks.yaml`
+- Entry point: `python -m package_name`
+- File filtering delegated to pre-commit's patterns
+- Never create custom CLI interfaces
+
+**Pattern**: For git hooks, always integrate with pre-commit framework rather than custom implementations.
+
+### API Integration Approach
+User preference for mature, well-tested SDKs even when using alternative providers:
+- Used OpenAI SDK for DeepSeek R1 integration
+- Environment variable configuration over config files
+- Graceful degradation when external services unavailable
+- Strategic type ignores for external API compatibility
+
+**Pattern**: Prefer established SDKs with good error handling over direct HTTP clients.
+
+### Type Safety Philosophy
+User wants strict type safety but practical flexibility:
+- Use pyrefly in strict mode
+- Add specific `# type: ignore` comments with error codes
+- Maintain type safety for internal code
+- Allow flexibility for external API integration
+
+**Pattern**: Maximum type safety with strategic ignores for practicality.
+
+### Testing Strategy Preferences
+User values comprehensive testing with real integration:
+- Unit tests with mocked dependencies
+- Integration tests with real API calls
+- Conditional test execution (skip without API keys)
+- Content quality validation in tests
+
+**Pattern**: Multiple test levels including real external service integration.
+
+### Error Handling Philosophy
+User strongly emphasized fail-safe operation:
+- Never block the primary workflow (git commits)
+- Graceful degradation on errors
+- Clear warning messages without disruption
+- Always return success codes for git hooks
+
+**Pattern**: For development tools, never interrupt the user's primary workflow.
+
+## Technical Preferences
+
+### Project Structure
+```
+project/
+├── pyproject.toml           # Single config file
+├── .pre-commit-hooks.yaml   # Hook definition
+├── Taskfile.yml            # Task automation
+├── src/package/             # Source code
+├── tests/                  # Test suite
+└── memory-bank/            # Project documentation
+```
+
+### Environment Configuration Pattern
+- Primary config via environment variables
+- Sensible defaults for zero-configuration usage
+- Validation with helpful error messages
+- No internal configuration files
+
+### Async Processing Preference
+User appreciates performance optimization:
+- Use asyncio for I/O bound operations
+- Concurrent processing where appropriate
+- Non-blocking API calls
+- Resource-efficient implementations
+
+### Documentation Standards
+User values comprehensive documentation:
+- Complete README with examples
+- Memory bank for project context
+- Clear setup instructions
+- Troubleshooting guides
+
+## Critical Implementation Details
+
+### DeepSeek R1 Integration
+- Use OpenAI SDK with custom base URL/model
+- Environment variable: `DEEPSEEK_API_KEY`
+- Default model: `deepseek-r1`
+- Configurable via `DEEPSEEK_MODEL` env var
+
+### Pre-commit Hook Patterns
+```yaml
+# Standard hook definition
+- id: semantic-merge
+  name: Semantic Document Merge
+  description: AI-powered semantic merging of documentation files
+  entry: python -m sem_merge
+  language: python
+  files: \.(md|mdc)$
+  require_serial: false
+```
+
+### Type Ignore Patterns
+```python
+# Import ignores for external libraries
+from openai import AsyncOpenAI  # type: ignore[import-untyped]
+
+# API call ignores for compatibility
+response = await self.client.chat.completions.create(  # type: ignore[misc]
+    model=self.model,  # type: ignore[arg-type]
+    messages=[{"role": "user", "content": prompt}],  # type: ignore[arg-type]
+)
+```
+
+### Task Automation Patterns
+User prefers clear, descriptive task names:
+- `task test` - Basic testing
+- `task test-integration` - External service testing
+- `task check` - All quality checks
+- `task fix` - Auto-fix issues
+
+## User Workflow Preferences
+
+### Development Cycle
+1. Quality first: All checks must pass
+2. Real testing: Integration tests with actual services
+3. Documentation: Complete user and developer docs
+4. Fail-safe operation: Never break user workflows
+
+### Problem-Solving Approach
+- User provides clear requirements upfront
+- Prefers comprehensive solutions over minimal implementations
+- Values modern tooling and best practices
+- Expects production-ready quality
+
+### Communication Style
+- User provides specific technical requirements
+- Appreciates detailed explanations of trade-offs
+- Values comprehensive documentation
+- Expects working code that can be run immediately
+
+## Architecture Insights
+
+### Modular Design Preference
+- Single responsibility classes
+- Clean separation of concerns
+- Repository pattern for external dependencies
+- Facade pattern for complex operations
+
+### Concurrency Patterns
+- Async/await for I/O operations
+- Parallel processing where beneficial
+- Resource-efficient implementations
+- Non-blocking external calls
+
+### Error Boundaries
+- Graceful degradation at every level
+- Comprehensive error handling
+- User-friendly error messages
+- Never disrupt primary workflows
+
+## Quality Assurance Patterns
+
+### Multi-Tool Quality Stack
+- ruff: Linting and formatting
+- pyrefly: Type checking
+- pytest: Testing with async support
+- Task automation: Consistent interface
+
+### Test Coverage Strategy
+- Unit tests: Mock external dependencies
+- Integration tests: Real service calls
+- Quality tests: All tools passing
+- Performance tests: Async efficiency
+
+This intelligence captures the key patterns and preferences learned during the sem-merge development process.
