@@ -16,8 +16,9 @@ def build_merge_prompt(local: str, remote: str, file_path: str) -> str:
         "- Combines information intelligently\n"
         "- Eliminates duplicates\n"
         "- Maintains consistent tone\n"
-        "- Retains all important information\n\n"
-        "- Does not add ``` tags at the beginning or end of the file\n\n"
+        "- Retains all important information\n"
+        "- Does not add ``` tags at the beginning or end of the file\n"
+        "- Remove any trailing newline or whitespace on the final document\n\n"
         "Return ONLY the merged content, no explanations."
     )
     return prompt
