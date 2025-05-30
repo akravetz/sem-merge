@@ -47,35 +47,43 @@ class ContentCache:
             pass
 
     def _content_hash(
-        self, local_content: str, remote_content: str, file_path: str
+        self, merged_content: str, remote_content: str, file_path: str
     ) -> str:
         """Generate a hash for the content combination.
 
         Args:
-            local_content: Current local file content
+            merged_content: The AI-generated merged content
+                (or content to check against)
             remote_content: Remote branch file content
             file_path: Path of the file being processed
 
         Returns:
             SHA-256 hash of the content combination
         """
-        content_key = f"{file_path}:{local_content}:{remote_content}"
+        content_key = f"{file_path}:{merged_content}:{remote_content}"
         return hashlib.sha256(content_key.encode("utf-8")).hexdigest()
 
     def is_processed(
-        self, local_content: str, remote_content: str, file_path: str
+        self, current_local_content: str, remote_content: str, file_path: str
     ) -> bool:
-        """Check if this content combination has already been processed.
+        """Check if the current local content matches previously merged content.
+
+        This prevents infinite loops by detecting when local content is already
+        the result of a previous merge operation.
 
         Args:
-            local_content: Current local file content
+            current_local_content: Current local file content to check
             remote_content: Remote branch file content
             file_path: Path of the file being processed
 
         Returns:
-            True if already processed, False otherwise
+            True if current local content matches cached merged content, False otherwise
         """
-        content_hash = self._content_hash(local_content, remote_content, file_path)
+        # Check if current local content matches any cached merged content
+        # for this file+remote combination
+        content_hash = self._content_hash(
+            current_local_content, remote_content, file_path
+        )
 
         if content_hash not in self.cache_data:
             return False
@@ -93,27 +101,27 @@ class ContentCache:
         return True
 
     def get_cached_result(
-        self, local_content: str, remote_content: str, file_path: str
+        self, current_local_content: str, remote_content: str, file_path: str
     ) -> str | None:
-        """Get cached merge result if available.
+        """Get cached merge result if current content matches cached merged content.
 
         Args:
-            local_content: Current local file content
+            current_local_content: Current local file content to check
             remote_content: Remote branch file content
             file_path: Path of the file being processed
 
         Returns:
-            Cached merged content if available, None otherwise
+            Current local content if it matches cached merged content, None otherwise
         """
-        if not self.is_processed(local_content, remote_content, file_path):
+        if not self.is_processed(current_local_content, remote_content, file_path):
             return None
 
-        content_hash = self._content_hash(local_content, remote_content, file_path)
-        return self.cache_data[content_hash].get("merged_content")
+        # If current local content matches cached merged content, return it as-is
+        # (no need to re-merge)
+        return current_local_content
 
     def store_result(
         self,
-        local_content: str,
         remote_content: str,
         file_path: str,
         merged_content: str,
@@ -121,12 +129,12 @@ class ContentCache:
         """Store a merge result in the cache.
 
         Args:
-            local_content: Current local file content
             remote_content: Remote branch file content
             file_path: Path of the file being processed
             merged_content: The AI-generated merged content
         """
-        content_hash = self._content_hash(local_content, remote_content, file_path)
+        # Use merged_content in hash, not local_content
+        content_hash = self._content_hash(merged_content, remote_content, file_path)
 
         self.cache_data[content_hash] = {
             "merged_content": merged_content,

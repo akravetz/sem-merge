@@ -244,15 +244,15 @@ class TestSemanticMerger:
                     assert test_file.read_text() == "merged content"
                     mock_create.assert_called_once()
 
-                    # Reset file content to original
-                    test_file.write_text("local content")
-
-                    # Second run should use cache (no API call)
+                    # Second run with same file (now contains "merged content")
+                    # should use cache
                     mock_create.reset_mock()
                     result2 = await semantic_merger_openai.process_files([test_file])
                     assert result2 == 1
                     assert test_file.read_text() == "merged content"
-                    mock_create.assert_not_called()  # Should not call API again
+                    # Should not call API again because local content
+                    # matches cached merged content
+                    mock_create.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_cache_different_content_combinations(
