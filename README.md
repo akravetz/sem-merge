@@ -27,7 +27,9 @@ repos:
   - repo: https://github.com/akravetz/sem-merge
     rev: v1.5.0  # Use the latest version
     hooks:
-      - id: semantic-merge
+      - id: semantic-merg
+        files: \.(md|mdc)$
+        exclude: ^(node_modules/|\.git/|docs/generated/)e
 ```
 
 to update to the latest version (recommended):
