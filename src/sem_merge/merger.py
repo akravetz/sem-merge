@@ -13,7 +13,14 @@ from .prompts import build_merge_prompt
 class SemanticMerger:
     """Handles semantic merging of documentation files."""
 
-    def __init__(self, provider: str, api_key: str, model: str | None = None, git_ops: GitOperations | None = None, cache: ContentCache | None = None):
+    def __init__(
+        self,
+        provider: str,
+        api_key: str,
+        model: str | None = None,
+        git_ops: GitOperations | None = None,
+        cache: ContentCache | None = None,
+    ):
         """Initialize the semantic merger with provider configuration.
 
         Args:
@@ -67,8 +74,10 @@ class SemanticMerger:
 
         # Check if this content combination has already been processed
         file_path_str = str(file_path)
-        cached_result = self.cache.get_cached_result(local_content, remote_content, file_path_str)
-        
+        cached_result = self.cache.get_cached_result(
+            local_content, remote_content, file_path_str
+        )
+
         if cached_result is not None:
             # Use cached result to avoid re-processing
             file_path.write_text(cached_result, encoding="utf-8")
@@ -80,7 +89,9 @@ class SemanticMerger:
         )
 
         # Store the result in cache for future use
-        self.cache.store_result(local_content, remote_content, file_path_str, merged_content)
+        self.cache.store_result(
+            local_content, remote_content, file_path_str, merged_content
+        )
 
         # Write back to file
         file_path.write_text(merged_content, encoding="utf-8")

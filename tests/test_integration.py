@@ -12,8 +12,8 @@ from sem_merge.__main__ import (
     filter_documentation_files,
     parse_args,
 )
-from sem_merge.merger import SemanticMerger
 from sem_merge.cache import ContentCache
+from sem_merge.merger import SemanticMerger
 
 
 @pytest.mark.skipif(
@@ -41,18 +41,20 @@ async def test_real_api_integration():
 
         # Create a mock GitOperations instance for dependency injection
         from unittest.mock import Mock
-        
+
         mock_git_ops = Mock()
         mock_git_ops.get_main_branch_content.return_value = (
             "# Remote Version\nThis is remote content."
         )
-        
+
         # Use a temporary cache directory for testing
         cache_dir = Path(temp_dir) / "cache"
         test_cache = ContentCache(cache_dir=cache_dir)
 
         # Create merger with injected mock GitOperations and test cache
-        merger = SemanticMerger(provider, api_key, git_ops=mock_git_ops, cache=test_cache)
+        merger = SemanticMerger(
+            provider, api_key, git_ops=mock_git_ops, cache=test_cache
+        )
         result = await merger.process_files([test_file])
 
         # Should successfully merge (real API call)

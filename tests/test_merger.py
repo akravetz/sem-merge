@@ -2,12 +2,12 @@
 
 import tempfile
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock, Mock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
-from sem_merge.merger import SemanticMerger
 from sem_merge.cache import ContentCache
+from sem_merge.merger import SemanticMerger
 
 
 @pytest.fixture
@@ -218,7 +218,8 @@ class TestSemanticMerger:
     async def test_process_file_with_caching(
         self, semantic_merger_openai, mock_openai_response
     ):
-        """Test that processed files are cached and retrieved from cache on subsequent runs."""
+        """Test that processed files are cached and retrieved from cache on
+        subsequent runs."""
         with tempfile.TemporaryDirectory() as temp_dir:
             test_file = Path(temp_dir) / "test.md"
             test_file.write_text("local content")
@@ -253,7 +254,7 @@ class TestSemanticMerger:
                     assert test_file.read_text() == "merged content"
                     mock_create.assert_not_called()  # Should not call API again
 
-    @pytest.mark.asyncio 
+    @pytest.mark.asyncio
     async def test_cache_different_content_combinations(
         self, semantic_merger_openai, mock_openai_response
     ):
@@ -263,7 +264,7 @@ class TestSemanticMerger:
 
             # First content combination
             test_file.write_text("local content 1")
-            
+
             with patch.object(
                 semantic_merger_openai.git_ops,
                 "get_main_branch_content",
@@ -286,7 +287,7 @@ class TestSemanticMerger:
 
             # Second content combination (different remote)
             test_file.write_text("local content 1")  # Same local content
-            
+
             with patch.object(
                 semantic_merger_openai.git_ops,
                 "get_main_branch_content",
