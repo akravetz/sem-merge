@@ -25,9 +25,14 @@ Add this to your `.pre-commit-config.yaml`:
 ```yaml
 repos:
   - repo: https://github.com/akravetz/sem-merge
-    rev: v1.4.0  # Use the latest version
+    rev: v1.5.0  # Use the latest version
     hooks:
       - id: semantic-merge
+```
+
+to update to the latest version (recommended):
+```bash
+pre-commit autoupdate
 ```
 
 ### Direct installation
