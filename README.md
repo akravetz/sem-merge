@@ -1,168 +1,202 @@
 # sem-merge
 
-AI-powered semantic document merging for git repositories via pre-commit framework.
+[![Tests](https://github.com/akravetz/sem-merge/actions/workflows/test.yml/badge.svg)](https://github.com/akravetz/sem-merge/actions/workflows/test.yml)
+[![PyPI version](https://badge.fury.io/py/sem-merge.svg)](https://badge.fury.io/py/sem-merge)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9+-blue.svg)](https://www.python.org/downloads/)
 
-## Overview
+A pre-commit hook that performs AI-powered semantic merging of documentation files, intelligently combining changes from your local branch with the main branch instead of traditional line-by-line merging.
 
-`sem-merge` is a pre-commit hook that automatically merges documentation files (`.md`, `.mdc`) with their counterparts from the remote main branch using AI-powered semantic understanding. It helps maintain consistent documentation across team collaborations by intelligently combining changes while preserving structure and eliminating duplicates.
+## Features
+
+- **Multi-Provider AI Support**: Works with both OpenAI (o3) and DeepSeek (R1) models
+- **Smart Auto-Detection**: Automatically selects provider based on available API keys
+- **Semantic Understanding**: AI comprehends document structure and meaning for intelligent merging
+- **Documentation Focus**: Targets `.md`, `.rst`, `.txt`, `.adoc`, and `.asciidoc` files
+- **Git Integration**: Seamlessly integrates with your existing pre-commit workflow
+- **Async Processing**: Handles multiple files concurrently for better performance
+- **Type Safe**: Built with modern Python type hints and strict linting
 
 ## Installation
 
-### Prerequisites
+### As a pre-commit hook (recommended)
 
-- Python 3.13+
-- Git repository with a `main` branch
-- DeepSeek API key
-
-### Setup
-
-1. Add to your `.pre-commit-config.yaml`:
+Add this to your `.pre-commit-config.yaml`:
 
 ```yaml
 repos:
   - repo: https://github.com/akravetz/sem-merge
-    rev: v1.0.0
+    rev: v1.1.0  # Use the latest version
     hooks:
       - id: semantic-merge
-        files: \.(md|mdc)$
-        exclude: ^(node_modules/|\.git/|docs/generated/)
 ```
 
-2. Set your DeepSeek API key:
+### Direct installation
 
 ```bash
-export DEEPSEEK_API_KEY="your-api-key-here"
-```
-
-3. Install pre-commit hooks:
-
-```bash
-pre-commit install
+pip install sem-merge
 ```
 
 ## Configuration
 
-### File Selection
+### API Keys
 
-Control which files are processed using pre-commit's `files` and `exclude` patterns:
+Set up your API key for your preferred provider:
 
-```yaml
-- id: semantic-merge
-  files: \.(md|mdc|rst)$          # Process these file types
-  exclude: ^(docs/generated/|build/|node_modules/)  # Skip these directories
+**Option 1: OpenAI**
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
 ```
 
-### Environment Variables
+**Option 2: DeepSeek**
+```bash
+export DEEPSEEK_API_KEY="your-deepseek-api-key"
+```
 
-- `DEEPSEEK_API_KEY` (required): Your DeepSeek API key
-- `DEEPSEEK_MODEL` (optional): AI model to use (default: `deepseek-r1`)
-- `DEEPSEEK_MAX_TOKENS` (optional): Maximum tokens for AI response (default: `4000`)
-- `SEMMERGE_LOG_LEVEL` (optional): Logging level (default: `INFO`)
+**Option 3: Both providers**
+```bash
+export OPENAI_API_KEY="your-openai-api-key"
+export DEEPSEEK_API_KEY="your-deepseek-api-key"
+# When both are set, you must specify --ai-provider flag
+```
 
-### Example Configuration
+### Provider Selection
+
+The hook automatically selects the provider based on available API keys:
+
+- **Only OPENAI_API_KEY set**: Uses OpenAI with o3 model
+- **Only DEEPSEEK_API_KEY set**: Uses DeepSeek with deepseek-r1 model  
+- **Both keys set**: Requires explicit `--ai-provider` flag
+
+### Command Line Arguments
 
 ```bash
-# Required
-export DEEPSEEK_API_KEY="your-deepseek-api-key"
+python -m sem_merge [options] [files...]
 
-# Optional customization
-export DEEPSEEK_MODEL="deepseek-r1"
-export DEEPSEEK_MAX_TOKENS="6000"
-export SEMMERGE_LOG_LEVEL="DEBUG"
+Options:
+  --ai-provider {openai,deepseek}    Force specific AI provider
+  --model MODEL                      Override default model for provider
+  -h, --help                        Show help message
+```
+
+### Examples
+
+```bash
+# Auto-detect provider (single API key available)
+python -m sem_merge README.md docs/
+
+# Force OpenAI provider (when both keys available)
+python -m sem_merge --ai-provider openai README.md
+
+# Use custom model
+python -m sem_merge --ai-provider openai --model gpt-4-turbo README.md
+
+# DeepSeek with custom model
+python -m sem_merge --ai-provider deepseek --model deepseek-chat README.md
 ```
 
 ## How It Works
 
-1. **Pre-commit Trigger**: When you commit changes, pre-commit runs this hook on modified `.md` and `.mdc` files
-2. **Remote Comparison**: For each file, fetches the latest version from `origin/main`
-3. **Change Detection**: Skips files that don't exist remotely or are identical
-4. **AI Merging**: Uses DeepSeek R1 to semantically merge local and remote versions
-5. **File Update**: Updates the staged file with merged content
-6. **Commit Continuation**: Allows the commit to proceed with merged documentation
+1. **File Detection**: Scans staged documentation files in your commit
+2. **Content Comparison**: Compares your local changes with the main branch
+3. **AI Analysis**: Sends both versions to your configured AI provider with semantic merge instructions
+4. **Intelligent Merging**: AI understands context and meaning to create a coherent merged document
+5. **Seamless Integration**: Updates files in place, ready for commit
 
-## Features
+### Semantic vs Traditional Merging
 
-- **Fail-safe Operation**: Never blocks commits (gracefully handles API failures)
-- **Intelligent Merging**: Preserves document structure and eliminates duplicates
-- **Parallel Processing**: Handles multiple files concurrently for speed
-- **Configurable**: Support for different AI models and parameters
-- **Zero Configuration**: Works out of the box with sensible defaults
-
-## Example Usage
-
-```bash
-# Make changes to documentation
-echo "# New Section\nSome new content" >> README.md
-
-# Stage and commit
-git add README.md
-git commit -m "Update documentation"
-
-# Output:
-# Semantically merged 1/1 files
-# [main abc1234] Update documentation
+**Traditional Git Merge:**
+```diff
+<<<<<<< HEAD
+## Installation
+Run `pip install mypackage` to install.
+=======
+## Setup
+Use `pip install mypackage` for installation.
+>>>>>>> main
 ```
+
+**Semantic Merge Result:**
+```markdown
+## Installation
+Run `pip install mypackage` to install the package.
+```
+
+## Requirements
+
+- Python 3.9+
+- Valid API key (OpenAI or DeepSeek)
+- Git repository
+
+## API Costs
+
+Both providers offer competitive pricing:
+
+- **DeepSeek R1**: ~$2.19 per million input tokens, ~$8.78 per million output tokens
+- **OpenAI o3**: Pricing varies by model and usage tier
+
+Documentation files are typically small, so costs are minimal for normal usage.
 
 ## Development
 
-### Setup Development Environment
+This project uses modern Python tooling:
 
 ```bash
-# Clone the repository
-git clone https://github.com/your-org/sem-merge
-cd sem-merge
-
-# Install dependencies
-uv sync --dev
+# Install with development dependencies
+pip install -e ".[dev]"
 
 # Run tests
 task test
 
-# Run all checks
-task check
+# Format code  
+task format
+
+# Type checking
+task typecheck
+
+# Lint code
+task lint
 ```
-
-### Available Tasks
-
-- `task test` - Run tests
-- `task test-cov` - Run tests with coverage
-- `task test-integration` - Run integration tests (requires DEEPSEEK_API_KEY)
-- `task lint` - Run ruff linting
-- `task format` - Format code with ruff
-- `task typecheck` - Run pyrefly type checking
-- `task check` - Run all checks
-- `task build` - Build package
-- `task test-hook` - Test hook locally
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run `task check` to ensure quality
-5. Submit a pull request
-
-## License
-
-MIT License - see LICENSE file for details.
 
 ## Troubleshooting
 
 ### Common Issues
 
-**Hook doesn't run**: Ensure your files match the `files` pattern in your pre-commit configuration.
-
-**API key not found**: Set the `DEEPSEEK_API_KEY` environment variable.
-
-**Git fetch fails**: Ensure you have network access and the remote repository is accessible.
-
-**Large files**: Consider increasing `DEEPSEEK_MAX_TOKENS` for very large documentation files.
-
-### Debug Mode
-
-Enable debug logging to see detailed operation:
-
+**Error: "No API key found"**
 ```bash
-export SEMMERGE_LOG_LEVEL=DEBUG
-git commit
-``` 
+# Set the appropriate environment variable
+export DEEPSEEK_API_KEY="your-key"  # or OPENAI_API_KEY
+```
+
+**Error: "Must specify --ai-provider"**
+```bash
+# When both API keys are present, be explicit:
+git config --global sem-merge.provider "openai"  # or add to .pre-commit-hooks.yaml
+```
+
+**Hook fails but doesn't block commit**
+```bash
+# Check API key validity and network connection
+curl -H "Authorization: Bearer $DEEPSEEK_API_KEY" https://api.deepseek.com/v1/models
+```
+
+## Breaking Changes in v1.1.0
+
+- **Hard Failure**: Hook now fails if AI API calls fail (no more graceful degradation)
+- **Multi-Provider Support**: Constructor and initialization changed significantly
+- **Argument Structure**: New command-line argument parsing
+- **Model Defaults**: OpenAI uses o3, DeepSeek uses deepseek-r1 by default
+
+If upgrading from v1.0.x, review your configuration for any custom scripting.
+
+## Contributing
+
+Contributions welcome! Please ensure:
+
+1. Tests pass: `task test`
+2. Code is formatted: `task format` 
+3. Types check: `task typecheck`
+4. Linting passes: `task lint`
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details. 

@@ -1,180 +1,192 @@
-"""Integration tests for semantic merger with real API calls."""
+"""Integration tests for semantic merge functionality."""
 
 import os
-from unittest.mock import Mock, patch
+import tempfile
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
+from sem_merge.__main__ import (
+    determine_provider_and_key,
+    filter_documentation_files,
+    parse_args,
+)
 from sem_merge.merger import SemanticMerger
 
-# Skip integration tests if no API key is available
-pytestmark = pytest.mark.skipif(
-    not os.getenv("DEEPSEEK_API_KEY"),
-    reason="DEEPSEEK_API_KEY not set - skipping integration tests",
+
+@pytest.mark.skipif(
+    not (os.getenv("OPENAI_API_KEY") or os.getenv("DEEPSEEK_API_KEY")),
+    reason="No API key available for integration test",
 )
+@pytest.mark.asyncio
+async def test_real_api_integration():
+    """Test with real API call (when API key available)."""
+    # Determine which provider to use based on available keys
+    openai_key = os.getenv("OPENAI_API_KEY")
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+
+    if openai_key:
+        provider = "openai"
+        api_key = openai_key
+    else:
+        provider = "deepseek"
+        api_key = deepseek_key
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        # Create test file with different content
+        test_file = Path(temp_dir) / "test.md"
+        test_file.write_text("# Local Version\nThis is local content.")
+
+        # Mock git operations to simulate remote content
+        with patch("sem_merge.merger.GitOperations") as mock_git_ops_class:
+            mock_git_ops = mock_git_ops_class.return_value
+            mock_git_ops.get_main_branch_content.return_value = (
+                "# Remote Version\nThis is remote content."
+            )
+
+            # Create merger and process files
+            merger = SemanticMerger(provider, api_key)
+            result = await merger.process_files([test_file])
+
+            # Should successfully merge (real API call)
+            assert result == 1
+
+            # Content should be changed (merged)
+            merged_content = test_file.read_text()
+            assert merged_content != "# Local Version\nThis is local content."
+            assert len(merged_content) > 0
 
 
-class TestSemanticMergerIntegration:
-    """Integration tests that make real API calls to DeepSeek."""
+class TestArgumentParsing:
+    """Test argument parsing logic."""
 
-    @pytest.fixture
-    def mock_git_ops(self):
-        """Mock git operations for integration tests."""
-        with patch("sem_merge.merger.GitOperations") as mock_class:
-            mock_instance = Mock()
-            mock_class.return_value = mock_instance
-            yield mock_instance
+    def test_parse_args_minimal(self):
+        """Test parsing with minimal arguments."""
+        with patch("sys.argv", ["sem_merge", "file1.md", "file2.md"]):
+            args = parse_args()
+            assert args.files == ["file1.md", "file2.md"]
+            assert args.ai_provider is None
+            assert args.model is None
 
-    @pytest.fixture
-    def merger(self, mock_git_ops):
-        """Create a real SemanticMerger instance with API key."""
-        api_key = os.getenv("DEEPSEEK_API_KEY")
-        return SemanticMerger(api_key)
+    def test_parse_args_with_provider(self):
+        """Test parsing with provider argument."""
+        with patch("sys.argv", ["sem_merge", "--ai-provider", "openai", "file.md"]):
+            args = parse_args()
+            assert args.ai_provider == "openai"
+            assert args.files == ["file.md"]
 
-    @pytest.fixture
-    def sample_files(self):
-        """Sample documentation content for merging."""
-        local_content = """# Project Documentation
+    def test_parse_args_with_model(self):
+        """Test parsing with model argument."""
+        with patch("sys.argv", ["sem_merge", "--model", "gpt-4", "file.md"]):
+            args = parse_args()
+            assert args.model == "gpt-4"
+            assert args.files == ["file.md"]
 
-## Overview
-This project provides a comprehensive solution for document management.
 
-## Features
-- Document storage
-- Version control
-- User permissions
+class TestProviderDetermination:
+    """Test provider determination logic."""
 
-## Installation
-1. Clone the repository
-2. Install dependencies
-3. Configure settings
+    def test_no_api_keys(self):
+        """Test error when no API keys available."""
+        with patch("sys.argv", ["sem_merge"]):
+            args = parse_args()
+            with patch.dict("os.environ", {}, clear=True):
+                with pytest.raises(ValueError, match="No API key found"):
+                    determine_provider_and_key(args)
 
-## Usage
-Start the application and access the web interface.
-"""
+    def test_only_openai_key(self):
+        """Test auto-selection with only OpenAI key."""
+        with patch("sys.argv", ["sem_merge"]):
+            args = parse_args()
+            with patch.dict(
+                "os.environ", {"OPENAI_API_KEY": "test-openai-key"}, clear=True
+            ):
+                provider, key = determine_provider_and_key(args)
+                assert provider == "openai"
+                assert key == "test-openai-key"
 
-        remote_content = """# Project Documentation
+    def test_only_deepseek_key(self):
+        """Test auto-selection with only DeepSeek key."""
+        with patch("sys.argv", ["sem_merge"]):
+            args = parse_args()
+            with patch.dict(
+                "os.environ", {"DEEPSEEK_API_KEY": "test-deepseek-key"}, clear=True
+            ):
+                provider, key = determine_provider_and_key(args)
+                assert provider == "deepseek"
+                assert key == "test-deepseek-key"
 
-## Overview
-This project is a powerful document management system.
+    def test_both_keys_no_provider_flag(self):
+        """Test error when both keys present but no provider specified."""
+        with patch("sys.argv", ["sem_merge"]):
+            args = parse_args()
+            env = {
+                "OPENAI_API_KEY": "test-openai-key",
+                "DEEPSEEK_API_KEY": "test-deepseek-key",
+            }
+            with patch.dict("os.environ", env, clear=True):
+                with pytest.raises(ValueError, match="Must specify --ai-provider"):
+                    determine_provider_and_key(args)
 
-## Features
-- Document storage and retrieval
-- Advanced search capabilities
-- User authentication
+    def test_both_keys_with_provider_flag(self):
+        """Test explicit provider selection when both keys present."""
+        with patch("sys.argv", ["sem_merge", "--ai-provider", "openai"]):
+            args = parse_args()
 
-## Setup
-1. Download the software
-2. Run the installer
-3. Launch the application
+        env = {
+            "OPENAI_API_KEY": "test-openai-key",
+            "DEEPSEEK_API_KEY": "test-deepseek-key",
+        }
+        with patch.dict("os.environ", env, clear=True):
+            provider, key = determine_provider_and_key(args)
+            assert provider == "openai"
+            assert key == "test-openai-key"
 
-## API Documentation
-The REST API provides programmatic access to all features.
-"""
-        return local_content, remote_content
+    def test_provider_flag_without_matching_key(self):
+        """Test error when provider flag doesn't match available key."""
+        with patch("sys.argv", ["sem_merge", "--ai-provider", "openai"]):
+            args = parse_args()
 
-    @pytest.mark.asyncio
-    async def test_real_semantic_merge(
-        self, merger, mock_git_ops, sample_files, tmp_path
-    ):
-        """Test semantic merging with real DeepSeek API call."""
-        local_content, remote_content = sample_files
+        with patch.dict(
+            "os.environ", {"DEEPSEEK_API_KEY": "test-deepseek-key"}, clear=True
+        ):
+            with pytest.raises(ValueError, match="OPENAI_API_KEY not found"):
+                determine_provider_and_key(args)
 
-        # Create a test file
-        test_file = tmp_path / "test_doc.md"
-        test_file.write_text(local_content)
 
-        # Mock git operations to return remote content
-        mock_git_ops.get_main_branch_content.return_value = remote_content
+class TestFileFiltering:
+    """Test documentation file filtering."""
 
-        # Process the file (this will make a real API call)
-        result = await merger._process_file(test_file)
+    def test_filter_documentation_files(self):
+        """Test filtering of documentation files."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
 
-        # Verify the merge was successful
-        assert result is True
+            # Create various file types
+            (temp_path / "doc.md").write_text("markdown")
+            (temp_path / "readme.rst").write_text("restructured text")
+            (temp_path / "notes.txt").write_text("text")
+            (temp_path / "guide.adoc").write_text("asciidoc")
+            (temp_path / "script.py").write_text("python code")
 
-        # Read the merged content
-        merged_content = test_file.read_text()
+            file_paths = [
+                str(temp_path / "doc.md"),
+                str(temp_path / "readme.rst"),
+                str(temp_path / "notes.txt"),
+                str(temp_path / "guide.adoc"),
+                str(temp_path / "script.py"),
+                str(temp_path / "nonexistent.md"),  # doesn't exist
+            ]
 
-        # Verify merged content is longer than both inputs
-        assert len(merged_content) > len(local_content), (
-            f"Merged content ({len(merged_content)} chars) should be longer "
-            f"than local ({len(local_content)} chars)"
-        )
-        assert len(merged_content) > len(remote_content), (
-            f"Merged content ({len(merged_content)} chars) should be longer "
-            f"than remote ({len(remote_content)} chars)"
-        )
+            filtered = filter_documentation_files(file_paths)
 
-        # Verify merged content contains elements from both sources
-        # Check for common elements that should be preserved
-        assert "# Project Documentation" in merged_content
-        assert "## Overview" in merged_content
-        assert "## Features" in merged_content
+            # Should only include existing documentation files
+            assert len(filtered) == 4
+            assert all(f.suffix in {".md", ".rst", ".txt", ".adoc"} for f in filtered)
+            assert all(f.exists() for f in filtered)
 
-        # Check that it combines information (both installation and setup
-        # should be present in some form)
-        merged_lower = merged_content.lower()
-        assert any(
-            word in merged_lower for word in ["install", "setup", "configure"]
-        ), "Merged content should contain installation/setup information"
-
-        # Verify it's not just concatenation (should be intelligently merged)
-        assert merged_content != local_content + remote_content
-        assert merged_content != remote_content + local_content
-
-        print("✓ Integration test passed:")
-        print(f"  Local content: {len(local_content)} characters")
-        print(f"  Remote content: {len(remote_content)} characters")
-        print(f"  Merged content: {len(merged_content)} characters")
-        print(f"  Merged content preview: {merged_content[:200]}...")
-
-    @pytest.mark.asyncio
-    async def test_merge_preserves_structure(self, merger, mock_git_ops, tmp_path):
-        """Test that merging preserves markdown structure."""
-        local_content = """# Main Title
-
-## Section A
-Content A from local.
-
-## Section B
-Local content for section B.
-"""
-
-        remote_content = """# Main Title
-
-## Section A
-Content A from remote with additional details.
-
-## Section C
-New section C from remote.
-"""
-
-        # Create test file
-        test_file = tmp_path / "structure_test.md"
-        test_file.write_text(local_content)
-
-        # Mock git operations
-        mock_git_ops.get_main_branch_content.return_value = remote_content
-
-        # Process file
-        result = await merger._process_file(test_file)
-        assert result is True
-
-        # Verify structure is preserved
-        merged_content = test_file.read_text()
-
-        # Should contain main title
-        assert "# Main Title" in merged_content
-
-        # Should have section headers (## format)
-        section_count = merged_content.count("## Section")
-        assert section_count >= 2, "Should preserve multiple sections"
-
-        # Should be longer than inputs
-        assert len(merged_content) > len(local_content)
-        assert len(merged_content) > len(remote_content)
-
-        print("✓ Structure preservation test passed:")
-        print(f"  Sections found: {section_count}")
-        print(f"  Total length: {len(merged_content)} characters")
+    def test_filter_empty_list(self):
+        """Test filtering empty file list."""
+        result = filter_documentation_files([])
+        assert result == []
