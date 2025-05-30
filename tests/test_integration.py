@@ -13,6 +13,7 @@ from sem_merge.__main__ import (
     parse_args,
 )
 from sem_merge.merger import SemanticMerger
+from sem_merge.cache import ContentCache
 
 
 @pytest.mark.skipif(
@@ -38,24 +39,29 @@ async def test_real_api_integration():
         test_file = Path(temp_dir) / "test.md"
         test_file.write_text("# Local Version\nThis is local content.")
 
-        # Mock git operations to simulate remote content
-        with patch("sem_merge.merger.GitOperations") as mock_git_ops_class:
-            mock_git_ops = mock_git_ops_class.return_value
-            mock_git_ops.get_main_branch_content.return_value = (
-                "# Remote Version\nThis is remote content."
-            )
+        # Create a mock GitOperations instance for dependency injection
+        from unittest.mock import Mock
+        
+        mock_git_ops = Mock()
+        mock_git_ops.get_main_branch_content.return_value = (
+            "# Remote Version\nThis is remote content."
+        )
+        
+        # Use a temporary cache directory for testing
+        cache_dir = Path(temp_dir) / "cache"
+        test_cache = ContentCache(cache_dir=cache_dir)
 
-            # Create merger and process files
-            merger = SemanticMerger(provider, api_key)
-            result = await merger.process_files([test_file])
+        # Create merger with injected mock GitOperations and test cache
+        merger = SemanticMerger(provider, api_key, git_ops=mock_git_ops, cache=test_cache)
+        result = await merger.process_files([test_file])
 
-            # Should successfully merge (real API call)
-            assert result == 1
+        # Should successfully merge (real API call)
+        assert result == 1
 
-            # Content should be changed (merged)
-            merged_content = test_file.read_text()
-            assert merged_content != "# Local Version\nThis is local content."
-            assert len(merged_content) > 0
+        # Content should be changed (merged)
+        merged_content = test_file.read_text()
+        assert merged_content != "# Local Version\nThis is local content."
+        assert len(merged_content) > 0
 
 
 class TestArgumentParsing:

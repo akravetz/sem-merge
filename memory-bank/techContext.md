@@ -15,8 +15,14 @@
 ```toml
 [project.dependencies]
 gitpython = ">=3.1.44"    # Git repository operations
-openai = ">=1.82.1"       # DeepSeek API integration via OpenAI SDK
+openai = ">=1.82.1"       # Multi-provider API integration via OpenAI SDK
 ```
+
+**Caching System (Built-in):**
+- **hashlib**: SHA-256 content fingerprinting (Python standard library)
+- **json**: Cache persistence format (Python standard library) 
+- **time**: TTL expiration handling (Python standard library)
+- **pathlib**: File system operations (Python standard library)
 
 #### Development Dependencies
 ```toml
@@ -61,10 +67,14 @@ sem-merge/
 │   ├── __main__.py         # Entry point
 │   ├── merger.py           # Core logic
 │   ├── git_ops.py          # Git operations
+│   ├── cache.py            # Content caching system
 │   └── prompts.py          # AI prompts
 ├── tests/                  # Test suite
 │   ├── test_merger.py      # Unit tests
+│   ├── test_cache.py       # Cache system tests
 │   └── test_integration.py # Integration tests
+├── .sem-merge-cache/       # Cache directory (created at runtime)
+│   └── processed.json      # Cached merge results
 └── memory-bank/            # Project documentation
 ```
 
@@ -151,17 +161,26 @@ flowchart TD
     D --> H[Package Distribution]
 ```
 
-#### Unit Testing (`test_merger.py`)
+#### Unit Testing (`test_merger.py`, `test_cache.py`)
 - **Mocked Dependencies**: Git operations and API calls isolated
-- **Component Testing**: Each class tested independently
+- **Component Testing**: Each class tested independently 
+- **Cache Testing**: Comprehensive cache functionality validation
 - **Edge Cases**: Error conditions and boundary cases covered
 - **Async Patterns**: Proper async/await testing with pytest-asyncio
 
+**Cache-Specific Testing (`test_cache.py`):**
+- **Content Fingerprinting**: Hash generation and collision resistance
+- **Persistence**: Cache survival across instances
+- **Expiration**: TTL behavior and cleanup functionality
+- **Error Handling**: Corrupted cache and permission error scenarios
+- **Performance**: Fast hash computation and retrieval
+
 #### Integration Testing (`test_integration.py`)
-- **Real API Calls**: Actual DeepSeek API integration testing
+- **Real API Calls**: Actual OpenAI/DeepSeek API integration testing
 - **Content Validation**: Verifies merge quality and length requirements
+- **Cache Integration**: End-to-end caching workflow validation
 - **Conditional Execution**: Automatically skipped without API key
-- **End-to-End Scenarios**: Complete workflow validation
+- **End-to-End Scenarios**: Complete workflow with caching
 
 #### Quality Assurance
 - **Type Safety**: pyrefly strict mode with targeted ignores

@@ -8,16 +8,22 @@ flowchart TD
     A[Pre-commit Framework] --> B[__main__.py Entry Point]
     B --> C[SemanticMerger]
     C --> D[GitOperations]
-    C --> E[DeepSeek API Client]
+    C --> E[AI API Client]
     C --> F[Prompt Builder]
+    C --> G[ContentCache]
     
-    D --> G[Remote Content Fetcher]
-    E --> H[OpenAI-Compatible API]
-    F --> I[Merge Instructions]
+    D --> H[Remote Content Fetcher]
+    E --> I[OpenAI/DeepSeek API]
+    F --> J[Merge Instructions]
+    G --> K[Content Fingerprinting]
     
-    C --> J[File Processor]
-    J --> K[Content Merger]
-    K --> L[File Writer]
+    C --> L[File Processor]
+    L --> M[Content Merger]
+    M --> N[File Writer]
+    
+    G --> O[Persistent Cache Storage]
+    K --> P[SHA-256 Hashing]
+    O --> Q[.sem-merge-cache/]
 ```
 
 ### Core Components
@@ -36,7 +42,8 @@ flowchart TD
   - Coordinate git operations and API calls
   - Manage concurrent file processing
   - Handle merge workflow logic
-- **Pattern**: Facade Pattern with async processing
+  - **NEW**: Integrate content caching for deterministic behavior
+- **Pattern**: Facade Pattern with async processing + Dependency Injection
 
 #### 3. GitOperations (`git_ops.py`)
 - **Purpose**: Abstracts git repository interactions
@@ -46,7 +53,16 @@ flowchart TD
   - Manage git errors gracefully
 - **Pattern**: Repository Pattern with error handling
 
-#### 4. Prompt Builder (`prompts.py`)
+#### 4. **ContentCache (`cache.py`) - NEW**
+- **Purpose**: Prevents infinite processing loops through content fingerprinting
+- **Responsibilities**:
+  - Generate SHA-256 hashes of content combinations
+  - Store and retrieve cached merge results
+  - Handle cache expiration and cleanup
+  - Provide persistent storage with graceful fallback
+- **Pattern**: Repository Pattern + Strategy Pattern for storage
+
+#### 5. Prompt Builder (`prompts.py`)
 - **Purpose**: Constructs AI prompts for semantic merging
 - **Responsibilities**:
   - Format content for AI processing
@@ -123,6 +139,21 @@ flowchart TD
 - **Benefits**: Consistent prompt construction
 - **Usage**: Creates structured prompts for AI processing
 
+### 6. Content Fingerprinting Pattern (NEW)
+- **Implementation**: SHA-256 hashing of content combinations
+- **Benefits**: Deterministic behavior and infinite loop prevention
+- **Usage**: `ContentCache._content_hash()` method
+
+### 7. Cache-Aside Pattern (NEW)
+- **Implementation**: Manual cache management in `SemanticMerger`
+- **Benefits**: Application controls caching logic with fallback to origin
+- **Usage**: Check cache → miss → process → store → return
+
+### 8. TTL (Time-To-Live) Pattern (NEW)
+- **Implementation**: 24-hour expiration with configurable constants
+- **Benefits**: Handles edge cases while preventing stale data
+- **Usage**: `CACHE_EXPIRATION_SECONDS` constant
+
 ## Component Relationships
 
 ### Data Flow
@@ -131,6 +162,24 @@ flowchart TD
 3. **Git Operations**: Fetch remote version for comparison
 4. **AI Processing**: Generate semantic merge via DeepSeek
 5. **Output**: Update staged files with merged content
+
+### **Cache-Enhanced Data Flow (NEW)**
+1. **Input**: Pre-commit passes modified file paths
+2. **Processing**: Each file is processed concurrently
+3. **Git Operations**: Fetch remote version for comparison
+4. **Content Fingerprinting**: Generate SHA-256 hash of content combination
+5. **Cache Check**: Look for existing merge result
+6. **Cache Hit**: Return cached result (skip AI processing)
+7. **Cache Miss**: Generate semantic merge via AI API
+8. **Cache Store**: Persist merge result for future use
+9. **Output**: Update staged files with merged content
+
+### **Cache Storage Strategy**
+- **Key Generation**: `SHA-256(file_path + local_content + remote_content)`
+- **Storage Format**: JSON with metadata (timestamp, file_path)
+- **Location**: `.sem-merge-cache/processed.json`
+- **Persistence**: Survives across git operations and tool restarts
+- **Expiration**: 24-hour TTL with automatic cleanup
 
 ### Error Handling Strategy
 - **Git Errors**: Skip file processing, continue with others

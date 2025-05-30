@@ -230,4 +230,7 @@ $RECYCLE.BIN/
 
 # Project-specific
 test_file.md
-*.tmp 
+*.tmp
+
+# sem-merge cache directory
+.sem-merge-cache/ 
