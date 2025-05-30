@@ -1,6 +1,6 @@
 -   id: semantic-merge
     name: Semantic Document Merge
-    description: AI-powered semantic merging of documentation files
+    description: AI-powered semantic merging of documentation filest
     entry: python -m sem_merge
     language: python
     files: \.(md|mdc)$

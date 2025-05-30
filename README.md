@@ -20,7 +20,7 @@ AI-powered semantic document merging for git repositories via pre-commit framewo
 
 ```yaml
 repos:
-  - repo: https://github.com/your-org/sem-merge
+  - repo: https://github.com/akravetz/sem-merge
     rev: v1.0.0
     hooks:
       - id: semantic-merge
