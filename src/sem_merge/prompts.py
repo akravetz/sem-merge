@@ -12,11 +12,12 @@ def build_merge_prompt(local: str, remote: str, file_path: str) -> str:
         "REMOTE MAIN VERSION:\n"
         f"```\n{remote}\n```\n\n"
         "Create a merged version that:\n"
-        "1. Preserves document structure and formatting\n"
-        "2. Combines information intelligently\n"
-        "3. Eliminates duplicates\n"
-        "4. Maintains consistent tone\n"
-        "5. Retains all important information\n\n"
+        "- Preserves document structure and formatting\n"
+        "- Combines information intelligently\n"
+        "- Eliminates duplicates\n"
+        "- Maintains consistent tone\n"
+        "- Retains all important information\n\n"
+        "- Does not add ``` tags at the beginning or end of the file\n\n"
         "Return ONLY the merged content, no explanations."
     )
     return prompt
